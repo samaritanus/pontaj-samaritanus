@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Varga Zsigmond",
+    "email": "",
+    "role": "Admin",
+    "hourlyRate": 30
+  },
+  {
+    "name": "Varga Horațiu",
+    "email": "",
+    "role": "Asistent medical",
+    "hourlyRate": 30
+  },
+  {
+    "name": "Pălăcean Szilard",
+    "email": "",
+    "role": "Asistent medical",
+    "hourlyRate": 21
+  },
+  {
+    "name": "Birtalan Alpár",
+    "email": "",
+    "role": "Asistent medical",
+    "hourlyRate": 21
+  },
+  {
+    "name": "Veress Árpád",
+    "email": "",
+    "role": "Asistent medical",
+    "hourlyRate": 50
+  },
+  {
+    "name": "Mihai Pui",
+    "email": "",
+    "role": "medic ATI",
+    "hourlyRate": 50
+  },
+  {
+    "name": "Kiraly Anton",
+    "email": "",
+    "role": "Ambulanțier",
+    "hourlyRate": 21
+  }
+]

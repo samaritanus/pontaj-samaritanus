@@ -1,0 +1,94 @@
+/* Evidențiere weekend în pontaj lunar */
+.pontaj-zilnic th.weekend, .pontaj-zilnic td.weekend {
+	background-color: #ffdddd;
+	color: #c00;
+	font-weight: bold;
+}
+@media print {
+	@page {
+		size: A4 landscape;
+		margin: 10mm;
+	}
+	body, .container {
+		background: #fff !important;
+		box-shadow: none !important;
+		color: #000 !important;
+	}
+	.header, .antet-firma, .legenda {
+		color: #000 !important;
+		background: none !important;
+	}
+	h2, h3 {
+		font-size: 1em !important;
+		margin: 0.2em 0;
+	}
+	table.pontaj-luna {
+		width: 100%;
+		font-size: 0.7em;
+		border: 1px solid #333;
+		border-collapse: collapse;
+		page-break-inside: avoid;
+	}
+	table.pontaj-luna th, table.pontaj-luna td {
+		border: 1px solid #333;
+		padding: 2px 3px;
+		min-width: 18px;
+		max-width: 28px;
+		word-break: break-word;
+	}
+	table.pontaj-luna th.weekend {
+		background: #f8d7da !important;
+		color: #c00 !important;
+	}
+	.logo { display: none !important; }
+	.listare-btn, #status, .add-form { display: none !important; }
+}
+.footer {
+	margin-top: 2em;
+	text-align: center;
+	font-size: 1.1em;
+	color: #007bff;
+	background: #e3f0ff;
+	padding: 1em 0 1em 0;
+	border-radius: 0 0 12px 12px;
+	box-shadow: 0 -2px 8px #b3c6e0;
+}
+.heart {
+	color: #e63946;
+	font-size: 1.2em;
+	vertical-align: middle;
+}
+.antet-firma {
+	font-size: 1.1em;
+	margin-bottom: 0.5em;
+	color: #fff;
+	text-align: center;
+	letter-spacing: 0.5px;
+}
+.header {
+	background: #007bff;
+	color: #fff;
+	border-radius: 12px 12px 0 0;
+	padding: 0.5em 0 0.5em 0;
+	text-align: center;
+	margin-bottom: 0.5em;
+}
+body { font-family: Arial, sans-serif; background: linear-gradient(120deg, #e3f0ff 0%, #f8f9fa 100%); }
+.container { max-width: 900px; margin: 2em auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px #b3c6e0; padding: 2em; }
+.header {
+	background: #007bff;
+	color: #fff;
+	border-radius: 12px 12px 0 0;
+	padding: 1em 0 1em 0;
+	text-align: center;
+	margin-bottom: 1em;
+}
+		/* eliminat duplicat, păstrăm doar primul bloc .header */
+th.total, th.suplim, td.total, td.suplim { min-width: 70px; max-width: 90px; font-size: 0.95em; }
+input, select { padding: 10px; font-size: 1em; margin-right: 1em; min-width: 180px; border-radius: 6px; border: 1px solid #b3c6e0; }
+label { margin-right: 0.5em; font-weight: bold; }
+.add-form { margin-top: 2em; display: flex; flex-wrap: wrap; gap: 1em; justify-content: center; align-items: center; }
+		/* eliminat duplicat, păstrăm doar primul bloc .logo */
+.listare-btn { margin-top: 1em; display: block; margin-left: auto; margin-right: auto; padding: 10px 24px; font-size: 1.1em; background: #007bff; color: #fff; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 8px #b3c6e0; }
+.listare-btn:hover { background: #0056b3; }
+@media (max-width: 600px) { .container { padding: 0.5em; } th, td { font-size: 0.9em; padding: 6px; } input, select { min-width: 120px; } }

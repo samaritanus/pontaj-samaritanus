@@ -1,0 +1,809 @@
+ 
+
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>Pontaj Samaritanus Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    .main-header { background: #007bff; color: #fff; }
+    .brand-link { background: #007bff; color: #fff; font-weight: bold; }
+    .user-panel img { background: #fff; }
+    .content-wrapper { background: #f4f6f9; }
+    .card { border-radius: 12px; }
+    .copyright-footer { text-align: center; color: #007bff; background: #e3f0ff; padding: 1em 0; font-size: 1.1em; border-radius: 0 0 12px 12px; }
+    /* Evidențiere weekend și celule libere în pontaj */
+    th.weekend, td.weekend { background-color: #fff6e0 !important; }
+    td.pontaj-L { color: #999; font-weight: 500; }
+  </style>
+</head>
+<body class="hold-transition sidebar-mini layout-fixed">
+<div class="wrapper">
+  <!-- Logo animat pe pagina de login -->
+  <div style="width:100%;text-align:center;margin-top:32px;margin-bottom:16px;">
+    <img src="/assets/logo512.png" alt="Logo" style="height:80px;width:80px;border-radius:20px;box-shadow:0 0 24px #007bff;animation:logoPulse 2s infinite alternate;">
+  </div>
+  <!-- Sidebar -->
+  <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <a href="#" class="brand-link">
+      <img src="/assets/logo512.png" alt="Logo" class="brand-image img-circle elevation-3" style="opacity: .95">
+      <span class="brand-text font-weight-light">Pontaj Samaritanus</span>
+    </a>
+    <div class="sidebar">
+      <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
+          <li class="nav-item">
+            <a href="#" class="nav-link active" id="btn-condica">
+              <i class="nav-icon fas fa-calendar-day"></i>
+              <p>Condica de prezență</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" id="btn-pontaj">
+              <i class="nav-icon fas fa-table"></i>
+              <p>Pontaj lunar</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" id="btn-import-users-open">
+              <i class="nav-icon fas fa-users"></i>
+              <p>Importă utilizatori</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" id="btn-admin">
+              <i class="nav-icon fas fa-list"></i>
+              <p>Evenimente pontaj</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" id="btn-users">
+              <i class="nav-icon fas fa-user-cog"></i>
+              <p>Utilizatori</p>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </aside>
+  <!-- Main Header -->
+  <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link" data-widget="pushmenu" href="#"><i class="fas fa-bars"></i></a>
+      </li>
+      <li class="nav-item d-none d-sm-inline-block">
+        <span class="brand-link">
+          <img src="/assets/logo512.png" alt="Logo" style="height:40px;width:40px;vertical-align:middle;margin-right:12px;border-radius:12px;box-shadow:0 0 12px #007bff;animation:logoPulse 2s infinite alternate;">
+          Pontaj Samaritanus
+        </span>
+      </li>
+    </ul>
+    <style>
+      @keyframes logoPulse {
+        0% { box-shadow:0 0 12px #007bff; transform:scale(1); }
+        100% { box-shadow:0 0 24px #00cfff; transform:scale(1.08); }
+      }
+    </style>
+  </nav>
+        
+        <script>
+        // Admin: listare evenimente pontaj din backend
+        (function(){
+          const API_URL = '/api/pontaje';
+          const tbodyId = 'admin-events-body';
+          let timer = null;
+
+          function fmtDate(iso){
+            try { return new Date(iso).toLocaleString(); } catch(e){ return iso; }
+          }
+          function renderRows(items){
+            const tbody = document.getElementById(tbodyId);
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            if (!items || !items.length){
+              tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nu există înregistrări încă.</td></tr>';
+              return;
+            }
+            items.forEach(ev => {
+              const tr = document.createElement('tr');
+              const user = ev.user || ev.username || '';
+              tr.innerHTML = `
+                <td>${user}</td>
+                <td>${ev.punct || ''}</td>
+                <td>${ev.action || ''}</td>
+                <td>${fmtDate(ev.timestamp)}</td>`;
+              tbody.appendChild(tr);
+            });
+          }
+          async function fetchEvents(){
+            try{
+              const res = await fetch(API_URL, { cache: 'no-store' });
+              const data = await res.json();
+              // sort desc by timestamp
+              const sorted = (data || []).slice().sort((a,b)=> new Date(b.timestamp) - new Date(a.timestamp));
+              renderRows(sorted);
+            }catch(err){
+              console.error('Eroare încărcare pontaje', err);
+            }
+          }
+          function startAuto(){
+            stopAuto();
+            timer = setInterval(fetchEvents, 30000);
+          }
+          function stopAuto(){ if (timer) { clearInterval(timer); timer = null; } }
+
+          // expune pentru alte scripturi
+          window.refreshAdminEvents = fetchEvents;
+
+          document.addEventListener('DOMContentLoaded', function(){
+            const btn = document.getElementById('btn-refresh-admin');
+            if (btn) btn.addEventListener('click', function(e){ e.preventDefault(); fetchEvents(); });
+
+            // pornește auto refresh când admin-ul devine vizibil
+            const adminSection = document.getElementById('admin-section');
+            const observer = new MutationObserver(()=>{
+              if (!adminSection) return;
+              const visible = adminSection.style.display !== 'none';
+              if (visible && !timer){ fetchEvents(); startAuto(); }
+              if (!visible && timer){ stopAuto(); }
+            });
+            if (adminSection){
+              observer.observe(adminSection, { attributes:true, attributeFilter:['style'] });
+            }
+
+            // Populează dropdown-ul cu puncte de lucru
+            (async function populatePuncte(){
+              const sel = document.getElementById('test-punct');
+              if (!sel) return;
+              try{
+                const res = await fetch('/assets/puncte_lucru.json', { cache:'no-store' });
+                const list = res.ok ? await res.json() : [];
+                const names = Array.from(new Set([
+                  'DISPECERAT SAMARITANUS',
+                  'CABINET AEROPORT',
+                  'WEEKEND',
+                  'PATINOAR',
+                  ...((Array.isArray(list)?list:[]).map(x=> String(x.nume||'').trim()).filter(Boolean))
+                ])).map(n=> n.toUpperCase());
+                sel.innerHTML = names.map(n=> `<option value="${n}">${n}</option>`).join('');
+                // setează implicit Dispecerat dacă există
+                const def = names.find(n=> n.includes('DISPECERAT')) || names[0];
+                if (def) sel.value = def;
+              }catch(e){ /* ignoră */ }
+            })();
+            const btnTest = document.getElementById('btn-test-pontaj');
+            if (btnTest){
+              btnTest.addEventListener('click', async ()=>{
+                const who = document.getElementById('test-email').value.trim();
+                const punct = document.getElementById('test-punct').value.trim();
+                const action = document.getElementById('test-action').value;
+                const out = document.getElementById('test-result');
+                out.textContent = '';
+                if (!who || !punct){ out.textContent = 'Completează email/nume și punct.'; return; }
+                try{
+                  const body = /@/.test(who) ? { email: who, punct, action } : { user: who, punct, action };
+                  const res = await fetch('/api/pontaj', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+                  const payload = await res.json();
+                  if (!res.ok){ out.textContent = 'Eroare: ' + (payload && payload.error ? payload.error : res.statusText); }
+                  else { out.textContent = 'Trimis. Reîncarc lista...'; fetchEvents(); }
+                }catch(e){ out.textContent = 'Eroare rețea: ' + e.message; }
+              });
+            }
+          });
+        })();
+        </script>
+  <div class="content-wrapper">
+    <section class="content">
+        <div id="condica-section">
+          <div class="card mt-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+              <h3 class="card-title mb-0">Condică de prezență</h3>
+              <button id="btn-export-condica" class="btn btn-light btn-sm"><i class="fas fa-file-excel"></i> Exportă Excel</button>
+            </div>
+            <div class="card-body">
+              <table class="table table-bordered table-striped" id="table-condica">
+                <thead>
+                  <tr>
+                    <th>Nume</th>
+                    <th>Punct</th>
+                    <th>Data</th>
+                    <th>Sosit</th>
+                    <th>Plecat</th>
+                    <th>Total ore</th>
+                    <th>Ore suplimentare</th>
+                  </thead>
+                  <tbody id="condica-body"></tbody>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div id="pontaj-section" style="display:none;">
+          <div class="card mt-4">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+              <h3 class="card-title mb-0">Pontaj lunar - detaliat pe zile</h3>
+              <div class="d-flex align-items-center gap-2">
+                <input type="month" id="pontaj-month" class="form-control form-control-sm" style="width:auto;" />
+                <button id="btn-export-pontaj" class="btn btn-light btn-sm"><i class="fas fa-file-excel"></i> Exportă Excel</button>
+                <button id="btn-import-users" class="btn btn-light btn-sm"><i class="fas fa-users"></i> Importă utilizatori</button>
+                <button id="btn-import-gsheet" class="btn btn-light btn-sm"><i class="fas fa-file-csv"></i> Din Google Sheets</button>
+                <button id="btn-import-excel" class="btn btn-light btn-sm"><i class="fas fa-file-excel"></i> Din Excel (.xlsx)</button>
+                <button id="btn-download-template" class="btn btn-light btn-sm"><i class="fas fa-download"></i> Template CSV</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped pontaj-zilnic" id="table-pontaj">
+                  <thead>
+                    <tr id="pontaj-head-row">
+                      <!-- se construiește dinamic -->
+                    </tr>
+                  </thead>
+                  <tbody id="pontaj-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="admin-section" style="display:none;">
+          <div class="card mt-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+              <h3 class="card-title mb-0">Evenimente pontaj (live)</h3>
+              <div class="btn-group btn-group-sm">
+                <button id="btn-refresh-admin" class="btn btn-light"><i class="fas fa-sync"></i> Actualizează</button>
+                <button id="btn-export-admin" class="btn btn-light"><i class="fas fa-file-excel"></i> Exportă Excel</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="mb-3 p-2 border rounded bg-light">
+                <strong>Testare rapidă pontaj</strong>
+                <div class="form-row mt-2">
+                  <div class="form-group col-md-3">
+                    <label for="test-email">Email sau Nume</label>
+                    <input type="text" id="test-email" class="form-control form-control-sm" placeholder="ex: zsigmond@samaritanus.ro" />
+                  </div>
+                  <div class="form-group col-md-3">
+                    <label for="test-punct">Punct</label>
+                    <select id="test-punct" class="form-control form-control-sm"></select>
+                  </div>
+                  <div class="form-group col-md-3">
+                    <label for="test-action">Acțiune</label>
+                    <select id="test-action" class="form-control form-control-sm">
+                      <option value="sosire">sosire</option>
+                      <option value="plecare">plecare</option>
+                    </select>
+                  </div>
+                  <div class="form-group col-md-3 d-flex align-items-end">
+                    <button id="btn-test-pontaj" class="btn btn-sm btn-success"><i class="fas fa-check"></i> Trimite test</button>
+                  </div>
+                </div>
+                <small class="text-muted">Dacă există listă de utilizatori încărcată, email/nume trebuie să corespundă exact unui utilizator.</small>
+                <div id="test-result" class="mt-2"></div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped" id="table-admin">
+                  <thead>
+                    <tr>
+                      <th style="min-width:160px">Nume</th>
+                      <th style="min-width:160px">Punct</th>
+                      <th style="min-width:120px">Acțiune</th>
+                      <th style="min-width:180px">Timp</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-events-body">
+                    <tr><td colspan="4" class="text-center text-muted">Nu există înregistrări încă.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <small class="text-muted">Se actualizează automat la fiecare 30 secunde când această pagină e deschisă.</small>
+            </div>
+          </div>
+        </div>
+
+        <div id="users-section" style="display:none;">
+          <div class="card mt-4">
+            <div class="card-header bg-secondary text-white">
+              <h3 class="card-title mb-0">Utilizatori</h3>
+            </div>
+            <div class="card-body">
+              <form id="user-form" class="mb-3">
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label for="uf-name">Nume</label>
+                    <input type="text" id="uf-name" class="form-control form-control-sm" required />
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label for="uf-email">Email</label>
+                    <input type="email" id="uf-email" class="form-control form-control-sm" />
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label for="uf-role">Rol</label>
+                    <input type="text" id="uf-role" class="form-control form-control-sm" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-md-4">
+                    <label for="uf-max">Max ore suplimentare</label>
+                    <input type="number" step="0.01" id="uf-max" class="form-control form-control-sm" />
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label for="uf-rate">Tarif orar</label>
+                    <input type="number" step="0.01" id="uf-rate" class="form-control form-control-sm" />
+                  </div>
+                  <div class="form-group col-md-4">
+                    <label for="uf-tariff">Suma pe oră</label>
+                    <input type="number" step="0.01" id="uf-tariff" class="form-control form-control-sm" />
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Salvează</button>
+                  <button type="button" id="uf-reset" class="btn btn-light btn-sm"><i class="fas fa-undo"></i> Resetează</button>
+                </div>
+              </form>
+
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped" id="table-users">
+                  <thead>
+                    <tr>
+                      <th>Nume</th>
+                      <th>Rol</th>
+                      <th>Email</th>
+                      <th>Max supl.</th>
+                      <th>Tarif orar</th>
+                      <th>Suma/oră</th>
+                      <th style="width:120px">Acțiuni</th>
+                    </tr>
+                  </thead>
+                  <tbody id="users-body"><tr><td colspan="7" class="text-center text-muted">Încărcare...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+    <footer class="main-footer">
+      <div class="copyright-footer">© Samaritanus</div>
+    </footer>
+  </div>
+
+  <script>
+  // Navigare între secțiuni și activare tab curent
+  document.addEventListener('DOMContentLoaded', function(){
+    const btnCondica = document.getElementById('btn-condica');
+    const btnPontaj = document.getElementById('btn-pontaj');
+  const btnAdmin = document.getElementById('btn-admin');
+  const btnImportUsersOpen = document.getElementById('btn-import-users-open');
+  const condicaSection = document.getElementById('condica-section');
+    const pontajSection = document.getElementById('pontaj-section');
+    const adminSection = document.getElementById('admin-section');
+  const usersSection = document.getElementById('users-section');
+    function activate(btn){ [btnCondica, btnPontaj, btnAdmin].forEach(b=>b&&b.classList.remove('active')); btn && btn.classList.add('active'); }
+  function show(section){ [condicaSection, pontajSection, adminSection, usersSection].forEach(s=> s && (s.style.display='none')); if (section) section.style.display=''; }
+    if (btnCondica) btnCondica.addEventListener('click', e=>{ e.preventDefault(); show(condicaSection); activate(btnCondica); if (window.buildCondica) window.buildCondica(); });
+    if (btnPontaj) btnPontaj.addEventListener('click', e=>{ e.preventDefault(); show(pontajSection); activate(btnPontaj); if (window.buildPontaj) window.buildPontaj(); });
+  if (btnAdmin) btnAdmin.addEventListener('click', e=>{ e.preventDefault(); show(adminSection); activate(btnAdmin); if (typeof window.refreshAdminEvents==='function') window.refreshAdminEvents(); });
+  const btnUsers = document.getElementById('btn-users');
+  if (btnUsers) btnUsers.addEventListener('click', e=>{ e.preventDefault(); show(usersSection); activate(btnUsers); if (window.refreshUsers) window.refreshUsers(); });
+    // set default month to current
+    const monthInput = document.getElementById('pontaj-month');
+    if (monthInput){
+      const now = new Date();
+      const ym = now.toISOString().slice(0,7);
+      monthInput.value = ym;
+      monthInput.addEventListener('change', ()=>{ if (window.buildPontaj) window.buildPontaj(); });
+    }
+    show(condicaSection); activate(btnCondica);
+    if (window.buildCondica) window.buildCondica();
+    async function importUsersFlow(){
+      const raw = prompt('Lipește lista de utilizatori (JSON sau CSV cu coloane name,email)');
+      if (!raw) return;
+      let users = [];
+      try {
+        if (raw.trim().startsWith('[')){
+          users = JSON.parse(raw);
+        } else {
+          // CSV minimal: header name,email (opțional), sau 2 coloane separate prin virgula
+          const lines = raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+          if (!lines.length) throw new Error('CSV gol');
+          const hasHeader = /name/i.test(lines[0]) && /email/i.test(lines[0]);
+          const rows = hasHeader ? lines.slice(1) : lines;
+          users = rows.map(l=>{
+            const [name,email] = l.split(',');
+            return { name: (name||'').trim(), email: (email||'').trim() };
+          }).filter(u=>u.name||u.email);
+        }
+      } catch(e){ alert('Nu am putut interpreta conținutul: ' + e.message); return; }
+      if (!Array.isArray(users) || !users.length){ alert('Lista este goală.'); return; }
+      try{
+        const res = await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(users) });
+        if (!res.ok){ const t = await res.text(); throw new Error(t); }
+        alert('Import realizat. Reîncarc pontajul.');
+        if (window.buildPontaj) window.buildPontaj();
+      }catch(e){ alert('Eroare import: ' + e.message); }
+    }
+
+    const btnImportUsers = document.getElementById('btn-import-users');
+    if (btnImportUsers){ btnImportUsers.addEventListener('click', importUsersFlow); }
+    const btnImportGSheet = document.getElementById('btn-import-gsheet');
+    if (btnImportGSheet){
+      btnImportGSheet.addEventListener('click', async ()=>{
+        const url = prompt('Introdu link-ul Google Sheets (ex: https://docs.google.com/spreadsheets/d/<ID>/edit#gid=<GID>)');
+        if (!url) return;
+        try{
+          const res = await fetch('/api/users/import-gsheet', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url }) });
+          const payload = await res.json();
+          if (!res.ok) throw new Error(payload && payload.error ? payload.error : 'Eroare la import');
+          alert(`Importat ${payload.count} utilizatori. Reîncarc pontajul.`);
+          if (window.buildPontaj) window.buildPontaj();
+        }catch(e){ alert('Eroare import GSheet: ' + e.message); }
+      });
+    }
+    if (btnImportUsersOpen){ btnImportUsersOpen.addEventListener('click', (e)=>{ e.preventDefault(); importUsersFlow(); }); }
+  });
+  </script>
+
+  <!-- Input ascuns pentru import Excel utilizatori -->
+  <input type="file" id="users-excel-input" accept=".xlsx,.xls" style="display:none" />
+
+  <script>
+  // Agregare evenimente -> Condica (zilnic) și Pontaj (lunar)
+  (function(){
+    const API_URL = '/api/pontaje';
+    const USERS_URL = '/api/users';
+    const daysLetters = ['d','l','m','m','j','v','s']; // 0=duminică ... 6=sâmbătă
+    function buildPontajHeader(year, month){ // month: 1..12
+      const theadRow = document.getElementById('pontaj-head-row');
+      if (!theadRow) return [];
+      const daysInMonth = new Date(year, month, 0).getDate();
+      const weekend = [];
+      let html = '';
+      html += '<th style="min-width:120px">Nume<\/th>';
+      html += '<th style="min-width:120px">Punct<\/th>';
+      for (let d=1; d<=daysInMonth; d++){
+        const dayDate = new Date(year, month-1, d);
+        const dow = dayDate.getDay();
+        const isWk = (dow===0 || dow===6);
+        weekend.push(isWk);
+        const letter = daysLetters[dow] || '';
+        const dd = String(d).padStart(2,'0');
+        html += `<th ${isWk?'class=\"weekend\"':''} style=\"width:22px\"><span>${dd}<\/span><br><span>${letter}<\/span><\/th>`;
+      }
+      html += '<th style="min-width:60px">Total ore<\/th>';
+      html += '<th style="min-width:60px">Ore suplimentare<\/th>';
+      html += '<th style="min-width:60px">CO<\/th>';
+      html += '<th style="min-width:60px">CM<\/th>';
+      html += '<th style="min-width:80px">Libere<\/th>';
+      html += '<th style="min-width:120px">Suma de primit<\/th>';
+      theadRow.innerHTML = html;
+      return weekend;
+    }
+    async function loadEvents(){
+      const res = await fetch(API_URL, { cache:'no-store' });
+      return await res.json();
+    }
+    async function loadUsers(){
+      try{
+        const res = await fetch(USERS_URL, { cache:'no-store' });
+        if (!res.ok) return [];
+        const data = await res.json();
+        if (Array.isArray(data)) return data;
+        return [];
+      }catch(e){ return []; }
+    }
+    function fmtDate(d){
+      const yy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return `${yy}-${mm}-${dd}`;
+    }
+    function toLocalHM(iso){ try{ const d=new Date(iso); return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});}catch(e){return '';} }
+    function minutesBetween(a,b){ const da=new Date(a), db=new Date(b); return Math.max(0, Math.round((db-da)/60000)); }
+    function pairAndSumDay(events){
+      // events: sorted by timestamp; pair sosire->plecare; sum all intervals
+      let total=0; let firstIn=null; let lastOut=null; let stack=[];
+      events.forEach(ev=>{
+        if ((ev.action||'').toLowerCase()==='sosire') { stack.push(ev); if (!firstIn) firstIn=ev; }
+        else if ((ev.action||'').toLowerCase()==='plecare') { if (stack.length){ const inEv=stack.pop(); total+=minutesBetween(inEv.timestamp, ev.timestamp); lastOut=ev; } }
+      });
+      return { minutes: total, firstIn, lastOut };
+    }
+    function groupBy(arr, keyFn){
+      const map=new Map();
+      arr.forEach(x=>{ const k=keyFn(x); const a=map.get(k); if (a) a.push(x); else map.set(k,[x]); });
+      return map;
+    }
+
+    async function buildCondica(){
+      const tbody = document.getElementById('condica-body'); if (!tbody) return;
+      const data = await loadEvents();
+      // group by user|punct|date
+      const sorted = (data||[]).slice().sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+      const map = groupBy(sorted, ev => {
+        const d = new Date(ev.timestamp); const dateKey = fmtDate(d);
+        const user = (ev.user || ev.username || '').trim();
+        const punct = String(ev.punct||'').trim().toUpperCase();
+        return `${user}||${punct}||${dateKey}`;
+      });
+      const rows=[];
+      map.forEach((events, key)=>{
+        const [user, punct, dateKey] = key.split('||');
+        const res = pairAndSumDay(events);
+        const totH = (res.minutes/60);
+        const supl = Math.max(0, totH-8);
+        // Afișează și zile cu doar "sosire" (fără "plecare") pentru transparență
+        rows.push({ user, punct, date: dateKey, sosit: res.firstIn? toLocalHM(res.firstIn.timestamp):'', plecat: res.lastOut? toLocalHM(res.lastOut.timestamp):'', total: totH.toFixed(2), supl: supl.toFixed(2) });
+      });
+      // sort desc by date then user
+      rows.sort((a,b)=> a.date===b.date ? a.user.localeCompare(b.user) : (a.date<b.date?1:-1));
+      tbody.innerHTML='';
+      if (!rows.length){ tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nu există înregistrări.</td></tr>'; return; }
+      rows.forEach(r=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML = `<td>${r.user}</td><td>${r.punct}</td><td>${r.date}</td><td>${r.sosit}</td><td>${r.plecat}</td><td>${r.total}</td><td>${r.supl}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function buildPontaj(){
+      const tbody = document.getElementById('pontaj-body'); if (!tbody) return;
+      const [data, users] = await Promise.all([loadEvents(), loadUsers()]);
+      const monthInput = document.getElementById('pontaj-month');
+      let ym = monthInput && monthInput.value ? monthInput.value : new Date().toISOString().slice(0,7);
+      const [year, month] = ym.split('-').map(x=>parseInt(x,10));
+  // actualizează antetul în funcție de lună și reține coloanele de weekend
+  const weekend = buildPontajHeader(year, month);
+  const daysInMonth = new Date(year, month, 0).getDate();
+      // filter events in that month
+      const inMonth = (data||[]).filter(ev=>{ const d=new Date(ev.timestamp); return d.getFullYear()===year && (d.getMonth()+1)===month; });
+      // group by user|punct|date, compute minutes per day (normalizare pentru a evita rânduri duplicate)
+      const sorted = inMonth.slice().sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+      const displayByKey = new Map(); // 'userkey||PUNCT' -> { user, punct }
+      const dayMap = groupBy(sorted, ev=>{
+        const d=new Date(ev.timestamp); const dateKey=fmtDate(d);
+        const rawUser = (ev.user||ev.username||'').trim();
+        const rawPunct = String(ev.punct||'').trim().toUpperCase();
+        const userKey = rawUser.toLowerCase();
+        const pairKey = `${userKey}||${rawPunct}`;
+        if (!displayByKey.has(pairKey)) displayByKey.set(pairKey, { user: rawUser, punct: rawPunct });
+        return `${pairKey}||${dateKey}`;
+      });
+      const userKeys = new Set();
+      const dayMinutes = new Map(); // key: user||punct -> array days index 1..daysInMonth
+      dayMap.forEach((events,key)=>{
+        const [userKey,punct,dateKey]=key.split('||');
+        const d = new Date(dateKey);
+        const day = d.getDate();
+        const res = pairAndSumDay(events);
+        const pairKey = `${userKey}||${punct}`;
+        userKeys.add(pairKey);
+        if (!dayMinutes.has(pairKey)) dayMinutes.set(pairKey, Array(daysInMonth).fill(0));
+        const arr = dayMinutes.get(pairKey);
+        arr[day-1] += res.minutes;
+      });
+      // Ensure all configured users appear at least once with zeros if no events
+      if (Array.isArray(users) && users.length){
+        const namesUsed = new Set(Array.from(dayMinutes.keys()).map(k=>k.split('||')[0]));
+        users.forEach(u=>{
+          const name = (u && (u.name || u.email)) ? String(u.name || u.email) : '';
+          if (!name) return;
+          const userKey = name.toLowerCase();
+          if (!namesUsed.has(userKey)){
+            const pairKey = `${userKey}||`;
+            userKeys.add(pairKey);
+            dayMinutes.set(pairKey, Array(daysInMonth).fill(0));
+            if (!displayByKey.has(pairKey)) displayByKey.set(pairKey, { user: name, punct: '' });
+          }
+        });
+      }
+      // hartă tarife orare după nume
+      const rateByName = new Map();
+      (Array.isArray(users)?users:[]).forEach(u=>{
+        const nm = (u && (u.name||u.email)) ? String(u.name||u.email).toLowerCase() : '';
+        if (!nm) return;
+        const rate = (u.hourlyRate!=null ? Number(u.hourlyRate) : (u.tariff!=null ? Number(u.tariff) : 0)) || 0;
+        rateByName.set(nm, rate);
+      });
+
+      // render rows
+      tbody.innerHTML='';
+      if (!userKeys.size){ tbody.innerHTML = `<tr><td colspan="${2+daysInMonth+6}" class="text-center text-muted">Nu există înregistrări pentru luna selectată.</td></tr>`; return; }
+      Array.from(userKeys).sort().forEach(pairKey=>{
+        const [userKey,punct]=pairKey.split('||');
+        const disp = displayByKey.get(pairKey) || { user: userKey, punct };
+        const arr = dayMinutes.get(pairKey) || Array(daysInMonth).fill(0);
+        let totalH=0, suplH=0, libere=0;
+        const tds = arr.map((min,idx)=>{
+          const h = +( (min||0) /60).toFixed(2);
+          if (h>0){ totalH += h; if (h>8) suplH += (h-8); return { text: h.toFixed(2), cls: weekend[idx] ? 'weekend' : '' }; }
+          libere++; return { text: 'L', cls: (weekend[idx] ? 'weekend ' : '') + 'pontaj-L' };
+        });
+        const tr=document.createElement('tr');
+        const nameKey = String(disp.user||'').toLowerCase();
+        const rate = rateByName.get(nameKey) || 0;
+        const suma = +(totalH * rate).toFixed(2);
+        tr.innerHTML = `<td>${disp.user}</td><td>${disp.punct||''}</td>` + tds.map(c=>`<td class="${c.cls}">${c.text}</td>`).join('') + `
+          <td>${totalH.toFixed(2)}</td>
+          <td>${suplH.toFixed(2)}</td>
+          <td>0</td><td>0</td><td>${libere}</td>
+          <td>${suma.toFixed(2)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    window.buildCondica = buildCondica;
+    window.buildPontaj = buildPontaj;
+  })();
+  </script>
+
+  <script>
+  // Tab Utilizatori: listare, adăugare/actualizare, ștergere
+  (function(){
+    async function fetchUsers(){
+      const res = await fetch('/api/users', { cache:'no-store' });
+      return res.ok ? await res.json() : [];
+    }
+    function renderUsers(list){
+      const tbody = document.getElementById('users-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (!list.length){ tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nu există utilizatori.</td></tr>'; return; }
+      list.forEach(u=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${u.name||''}</td>
+          <td>${u.role||''}</td>
+          <td>${u.email||''}</td>
+          <td>${u.maxOvertime!=null? u.maxOvertime:''}</td>
+          <td>${u.hourlyRate!=null? u.hourlyRate:''}</td>
+          <td>${u.tariff!=null? u.tariff:''}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary btn-edit"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-sm btn-outline-danger btn-del"><i class="fas fa-trash"></i></button>
+          </td>`;
+        tr.querySelector('.btn-edit').addEventListener('click', ()=>{
+          document.getElementById('uf-name').value = u.name||'';
+          document.getElementById('uf-email').value = u.email||'';
+          document.getElementById('uf-role').value = u.role||'';
+          document.getElementById('uf-max').value = u.maxOvertime!=null? u.maxOvertime:'';
+          document.getElementById('uf-rate').value = u.hourlyRate!=null? u.hourlyRate:'';
+          document.getElementById('uf-tariff').value = u.tariff!=null? u.tariff:'';
+        });
+        tr.querySelector('.btn-del').addEventListener('click', async ()=>{
+          if (!confirm('Ștergi utilizatorul?')) return;
+          const q = u.email ? `email=${encodeURIComponent(u.email)}` : `name=${encodeURIComponent(u.name||'')}`;
+          const res = await fetch(`/api/user?${q}`, { method:'DELETE' });
+          if (!res.ok){ const t=await res.text(); alert('Eroare: ' + t); return; }
+          refresh();
+        });
+        tbody.appendChild(tr);
+      });
+    }
+    async function refresh(){ const list = await fetchUsers(); renderUsers(list); }
+    window.refreshUsers = refresh;
+
+    document.addEventListener('DOMContentLoaded', function(){
+      const form = document.getElementById('user-form');
+      const resetBtn = document.getElementById('uf-reset');
+      if (resetBtn) resetBtn.addEventListener('click', ()=> form && form.reset());
+      if (form){
+        form.addEventListener('submit', async (e)=>{
+          e.preventDefault();
+          const payload = {
+            name: document.getElementById('uf-name').value.trim(),
+            email: document.getElementById('uf-email').value.trim(),
+            role: document.getElementById('uf-role').value.trim(),
+            maxOvertime: document.getElementById('uf-max').value.trim(),
+            hourlyRate: document.getElementById('uf-rate').value.trim(),
+            tariff: document.getElementById('uf-tariff').value.trim(),
+          };
+          try{
+            const res = await fetch('/api/user', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data && data.error ? data.error : 'Eșec salvare');
+            form.reset();
+            refresh();
+          }catch(err){ alert('Eroare: ' + err.message); }
+        });
+      }
+    });
+  })();
+  </script>
+
+  <script>
+  // Export Excel pentru Condica, Pontaj și Evenimente
+  document.addEventListener('DOMContentLoaded', function(){
+    const bindExport = (btnId, tableId, name) => {
+      const b = document.getElementById(btnId);
+      if (!b) return;
+      b.addEventListener('click', function(){
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const wb = XLSX.utils.table_to_book(table, { sheet: name||'Sheet1' });
+        XLSX.writeFile(wb, `${name||'Export'}.xlsx`);
+      });
+    };
+
+    // Import din Excel (.xlsx)
+    const btnImportExcel = document.getElementById('btn-import-excel');
+    const excelInput = document.getElementById('users-excel-input');
+    function norm(h){ return String(h||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+    function mapUserRow(row){
+      // Acceptă chei cu sau fără diacritice (name/nume, email, rol/role, max ore suplimentare, tarif orar, suma pe ora)
+      const obj = {};
+      Object.keys(row||{}).forEach(k=>{ obj[norm(k)] = row[k]; });
+      const u = {
+        name: obj['name'] || obj['nume'] || '',
+        email: obj['email'] || obj['e-mail'] || obj['mail'] || '',
+        role: obj['rol'] || obj['role'] || obj['functie'] || obj['functie'] || '',
+        maxOvertime: obj['max ore suplimentare'] || obj['maxim ore suplimentare'] || obj['maxim de ore suplimentare'] || obj['overtime max'] || undefined,
+        hourlyRate: obj['tarif orar'] || obj['tariful orar'] || obj['hourly rate'] || undefined,
+        tariff: obj['suma pe ora'] || obj['suma ora'] || obj['plata pe ora'] || obj['platit pe ora'] || undefined
+      };
+      // Convertă numericele
+      ['maxOvertime','hourlyRate','tariff'].forEach(f=>{ if (u[f]!=null && u[f]!=='' ) u[f] = Number(String(u[f]).replace(',','.')); else delete u[f]; });
+      return u;
+    }
+    async function importUsersFromWorkbook(wb){
+      const sheetName = wb.SheetNames && wb.SheetNames[0];
+      if (!sheetName) { alert('Fișier Excel fără foi.'); return; }
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!rows || !rows.length){ alert('Nu am găsit rânduri în Excel.'); return; }
+      const users = rows.map(mapUserRow).filter(u=>u.name||u.email);
+      if (!users.length){ alert('Nu am putut găsi coloane recunoscute (name/nume, email, etc).'); return; }
+      try{
+        const res = await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(users) });
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload && payload.error ? payload.error : 'Eroare la import');
+        alert(`Importat ${payload.count} utilizatori din Excel. Reîncarc pontajul.`);
+        if (window.buildPontaj) window.buildPontaj();
+      }catch(e){ alert('Eroare import Excel: ' + e.message); }
+    }
+    if (btnImportExcel && excelInput){
+      btnImportExcel.addEventListener('click', ()=> excelInput.click());
+      excelInput.addEventListener('change', (e)=>{
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = (evt)=>{
+          try{
+            const data = new Uint8Array(evt.target.result);
+            const wb = XLSX.read(data, { type:'array' });
+            importUsersFromWorkbook(wb);
+          }catch(err){ alert('Nu pot citi Excel-ul: ' + err.message); }
+        };
+        reader.readAsArrayBuffer(f);
+        // reset input pentru importuri consecutive
+        e.target.value = '';
+      });
+    }
+
+    // Template CSV descărcare
+    const btnDownloadTemplate = document.getElementById('btn-download-template');
+    if (btnDownloadTemplate){
+      btnDownloadTemplate.addEventListener('click', ()=>{
+        const csv = 'name,email,rol,max ore suplimentare,tarif orar,suma pe ora\n';
+        const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'users_template.csv';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    }
+    bindExport('btn-export-condica', 'table-condica', 'Condica');
+    bindExport('btn-export-pontaj', 'table-pontaj', 'Pontaj');
+    bindExport('btn-export-admin',  'table-admin',  'Evenimente');
+  });
+  </script>
+
+</body>
+</html>

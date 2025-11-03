@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Pontaj</string>
+    <string name="login_title">Autentificare</string>
+    <string name="label_server_url">URL server</string>
+    <string name="hint_server_url">http://192.168.1.200:5000</string>
+    <string name="label_email">Email</string>
+    <string name="label_name">Nume</string>
+    <string name="btn_login">Intră</string>
+    <string name="select_punct">Alege punct de lucru</string>
+    <string name="btn_sosire">Sosire</string>
+    <string name="btn_plecare">Plecare</string>
+    <string name="summary_title">Rezumat lunar</string>
+    <string name="label_hours">Ore lucrate</string>
+    <string name="label_income">Venit brut</string>
+    <string name="label_paid">Sume plătite</string>
+    <string name="label_due">Rest de plată</string>
+    <string name="label_month">Luna</string>
+
+    <!-- Landing intro content -->
+    <string name="intro_title">Aplicația de pontaj Samaritanus te ajută să marchezi sosirea și plecarea din tură și să calculezi automat orele lucrate.</string>
+    <string name="intro_subtitle">Ce oferă aplicația Pontaj Samaritanus</string>
+    <string name="intro_b1">• Calcul automat al orelor lucrate și al turelor</string>
+    <string name="intro_b2">• Pontaj rapid: sosire și plecare cu un singur click</string>
+    <string name="intro_b3">• Localizare la pontare pentru transparență și siguranță</string>
+    <string name="intro_b4">• Elimină pontajul pe hârtie și economisește timp</string>
+    <string name="intro_image_desc">Ambulanță Samaritanus</string>
+
+    <!-- MainActivity formatting strings -->
+    <string name="month_label_value">Luna: %1$s</string>
+    <string name="last_event">Ultimul eveniment: %1$s la %2$s</string>
+    <string name="summary_full">Ore lucrate: %1$.2f h
+Venit brut: %2$.2f RON
+Sume plătite: %3$.2f RON
+Rest de plată: %4$.2f RON</string>
+    <string name="summary_partial">Ore lucrate: %1$.2f h
+Venit brut: %2$.2f RON
+Sume plătite: - RON
+Rest de plată: - RON</string>
+    <string name="err_load_summary">Nu pot încărca rezumatul</string>
+    <string name="err_load_users">Nu pot încărca utilizatorii</string>
+</resources>

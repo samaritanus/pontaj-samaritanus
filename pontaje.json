@@ -1,0 +1,15 @@
+[
+  {
+    "user": "Varga Zsigmond",
+    "email": "zsigmond@samaritanus.ro",
+    "punct": "dispecerat samaritanus",
+    "action": "sosire",
+    "timestamp": "2025-11-02T22:07:38.811Z"
+  },
+  {
+    "user": "Varga Zsigmond",
+    "punct": "DISPECERAT SAMARITANUS",
+    "action": "plecare",
+    "timestamp": "2025-11-02T22:40:21.006Z"
+  }
+]
