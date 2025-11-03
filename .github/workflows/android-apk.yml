@@ -23,15 +23,17 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: gradle
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: |-
-            build-tools;35.0.0
-            platforms;android-35
-            platform-tools
-            cmdline-tools;latest
+
+      - name: Install SDK packages (API 35)
+        run: |
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
       - name: Remove local.properties (use CI SDK)
         run: rm -f local.properties
@@ -40,7 +42,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew --no-daemon clean assembleDebug
+        run: ./gradlew --no-daemon clean assembleDebug --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
