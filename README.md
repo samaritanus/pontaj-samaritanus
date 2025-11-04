@@ -23,9 +23,15 @@ flowchart TD
     style E fill:#fee,stroke:#533
 ```
 
-- Ecranul „Home” este prima pagină (launcher) și explică pe scurt ce face aplicația; butonul „Intră în aplicație” te duce la Login.
+ - Ecranul „Home” este prima pagină (launcher) și explică pe scurt ce face aplicația; butonul „Intră în aplicație” te duce la Login.
 - După Login ajungi în „Main”, unde marchezi Sosire/Plecare și vezi sumarul.
 - Din „Main” poți deschide „Earnings” (venituri) sau „Day Detail” (detalii pe zi).
+
+### Previzualizări rapide (mock-uri, aspect pe telefon)
+
+| Home | Login | Main |
+|---|---|---|
+| <img src="public/preview/mock-home.svg" width="240" /> | <img src="public/preview/mock-login.svg" width="240" /> | <img src="public/preview/mock-main.svg" width="240" /> |
 
 ## Flux de date (simplificat)
 
