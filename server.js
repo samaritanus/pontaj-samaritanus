@@ -4,6 +4,9 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const app = express();
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret';
 const PORT = 5000;
 
 app.use(cors());
@@ -55,6 +58,33 @@ function buildUserIndex(users){
     if (u.name) byNameNorm.set(norm(u.name), u);
   });
   return { byEmail, byName, byNameNorm, norm };
+}
+
+function issueToken(user){
+  const payload = { email: user.email || '', name: user.name || '' };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+}
+
+function authMiddleware(req, res, next){
+  const auth = req.headers['authorization'] || '';
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if(!m) return res.status(401).json({ error: 'Necesită autentificare' });
+  try{
+    const payload = jwt.verify(m[1], JWT_SECRET);
+    req.auth = payload; // { email, name }
+    next();
+  }catch(e){
+    return res.status(401).json({ error: 'Token invalid sau expirat' });
+  }
+}
+
+function optionalAuth(req, _res, next){
+  const auth = req.headers['authorization'] || '';
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if(m){
+    try{ req.auth = jwt.verify(m[1], JWT_SECRET); }catch{ /* ignore */ }
+  }
+  next();
 }
 
 function loadAvansuri(){
@@ -128,8 +158,17 @@ function parseUsersCSV(csv){
 }
 
 // Endpoint pentru listare pontaje
-app.get('/api/pontaje', (req, res) => {
+app.get('/api/pontaje', optionalAuth, (req, res) => {
   const pontaje = loadPontaje();
+  if (req.auth){
+    const meEmail = (req.auth?.email||'').toLowerCase();
+    const meName = (req.auth?.name||'').toLowerCase();
+    const mine = pontaje.filter(e =>
+      (e.email && String(e.email).toLowerCase() === meEmail) ||
+      (e.user && String(e.user).toLowerCase() === meName)
+    );
+    return res.json(mine);
+  }
   res.json(pontaje);
 });
 
@@ -141,12 +180,16 @@ app.get('/api/users', (req, res) => {
 
 // Avansuri: listare și adăugare
 // GET /api/avansuri?email=...&name=...&month=YYYY-MM
-app.get('/api/avansuri', (req, res) => {
-  const { email, name, month } = req.query || {};
+app.get('/api/avansuri', optionalAuth, (req, res) => {
+  const { month } = req.query || {};
+  const meEmail = (req.query.email || req.auth?.email || '').toString().toLowerCase();
+  const meName = (req.query.name || req.auth?.name || '').toString().toLowerCase();
   const list = loadAvansuri();
   const filt = list.filter(a => {
-    if (email && (a.email||'').toLowerCase() !== String(email).toLowerCase()) return false;
-    if (name && (a.user||'').toLowerCase() !== String(name).toLowerCase()) return false;
+    const aEmail = String(a.email||'').toLowerCase();
+    const aUser = String(a.user||'').toLowerCase();
+    if (meEmail && aEmail !== meEmail) return false;
+    if (!meEmail && meName && aUser !== meName) return false;
     if (month && a.month !== month) return false;
     return true;
   });
@@ -154,22 +197,23 @@ app.get('/api/avansuri', (req, res) => {
 });
 
 // POST /api/avans { email|user, month: 'YYYY-MM', suma }
-app.post('/api/avans', (req, res) => {
+app.post('/api/avans', optionalAuth, (req, res) => {
   try{
-    const { email, user, month, suma } = req.body || {};
+    const { month, suma, email, user } = req.body || {};
     if (!month || !/\d{4}-\d{2}/.test(String(month))) return res.status(400).json({ error: 'Lipseste month (YYYY-MM)' });
     const users = loadUsers();
     const idx = buildUserIndex(users);
-    let found = null;
-    if (email && idx.byEmail.has(String(email).toLowerCase())) found = idx.byEmail.get(String(email).toLowerCase());
+    const meEmail = (req.auth?.email||'').toLowerCase();
+    let found = (meEmail && idx.byEmail.get(meEmail)) || null;
+    if (!found && email && idx.byEmail.has(String(email).toLowerCase())) found = idx.byEmail.get(String(email).toLowerCase());
     if (!found && user){
       const nm = String(user).trim();
       found = idx.byName.get(nm.toLowerCase()) || idx.byNameNorm.get(idx.norm(nm));
     }
     if (!found && users.length>0) return res.status(400).json({ error: 'Utilizator necunoscut pentru avans' });
     const entry = {
-      user: found?.name || (user||''),
-      email: found?.email || (email||''),
+      user: found?.name || req.auth?.name || (user||''),
+      email: found?.email || req.auth?.email || (email||''),
       month: String(month),
       suma: Number(String(suma||0).replace(',','.')) || 0,
       createdAt: new Date().toISOString(),
@@ -290,6 +334,60 @@ app.get('/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
 
+// Auth endpoints (web-only)
+// Register a user: { name, email, password }
+app.post('/api/auth/register', (req, res) => {
+  try{
+    const { name, email, password } = req.body || {};
+    if (!email || !password) return res.status(400).json({ error: 'Email și parolă sunt obligatorii' });
+    const users = loadUsers();
+    const idxEmail = users.findIndex(u => (u.email||'').toLowerCase() === String(email).toLowerCase());
+    const hash = bcrypt.hashSync(String(password), 10);
+    if (idxEmail >= 0){
+      // If exists and has password, block duplicate registration
+      if (users[idxEmail].passwordHash) return res.status(409).json({ error: 'Utilizator deja înregistrat' });
+      users[idxEmail] = { ...users[idxEmail], name: name || users[idxEmail].name, email, passwordHash: hash };
+    } else {
+      users.push({ name: name || email, email, passwordHash: hash });
+    }
+    saveUsers(users);
+    const user = users[idxEmail >= 0 ? idxEmail : users.length-1];
+    const token = issueToken(user);
+    res.json({ token, user: { name: user.name, email: user.email, hourlyRate: user.hourlyRate } });
+  }catch(e){
+    console.error('Eroare register:', e);
+    res.status(500).json({ error: 'Eroare server' });
+  }
+});
+
+// Login: { email, password }
+app.post('/api/auth/login', (req, res) => {
+  try{
+    const { email, password } = req.body || {};
+    if (!email || !password) return res.status(400).json({ error: 'Email și parolă sunt obligatorii' });
+    const users = loadUsers();
+    const user = users.find(u => (u.email||'').toLowerCase() === String(email).toLowerCase());
+    if (!user || !user.passwordHash) return res.status(401).json({ error: 'Credențiale invalide' });
+    const ok = bcrypt.compareSync(String(password), user.passwordHash);
+    if (!ok) return res.status(401).json({ error: 'Credențiale invalide' });
+    const token = issueToken(user);
+    res.json({ token, user: { name: user.name, email: user.email, hourlyRate: user.hourlyRate } });
+  }catch(e){
+    console.error('Eroare login:', e);
+    res.status(500).json({ error: 'Eroare server' });
+  }
+});
+
+// Current user
+app.get('/api/me', authMiddleware, (req, res) => {
+  try{
+    const users = loadUsers();
+    const u = users.find(x => (x.email||'').toLowerCase() === String(req.auth?.email||'').toLowerCase());
+    if (!u) return res.status(404).json({ error: 'Utilizator inexistent' });
+    res.json({ name: u.name, email: u.email, hourlyRate: u.hourlyRate });
+  }catch(e){ res.status(500).json({ error: 'Eroare server' }); }
+});
+
 // Endpoint de test simplu (eco) pentru depanare din mobil sau rețea
 app.get('/api/ping', (req, res) => {
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -311,14 +409,14 @@ app.get('/api/pontaj', (req, res) => {
 });
 
 // Endpoint pentru adăugare pontaj
-app.post('/api/pontaj', (req, res) => {
+app.post('/api/pontaj', optionalAuth, (req, res) => {
   const { user, username, email, punct, action, timestamp, latitude, longitude } = req.body || {};
   const users = loadUsers();
   const idx = buildUserIndex(users);
 
   // prefer email if present, else fallback to user/username
-  const providedEmail = email && String(email).trim();
-  const providedName = (user || username) && String(user || username).trim();
+  const providedEmail = (req.auth?.email ? String(req.auth.email) : (email && String(email)))?.trim();
+  const providedName = (req.auth?.name ? String(req.auth.name) : ((user||username) && String(user||username)))?.trim();
 
   let canonicalUser = null; // { name, email }
   if (providedEmail && idx.byEmail.has(providedEmail.toLowerCase())) {
