@@ -21,6 +21,7 @@
         <button class="side-item" data-nav="dashboard">📊 Dashboard</button>
         <button class="side-item" data-nav="raport">📄 Raport general</button>
         <button class="side-item" data-nav="login">🔐 Autentificare</button>
+        <button class="side-item" data-nav="logout">🚪 Ieșire</button>
         <button class="side-item" data-nav="home">ℹ️ Despre</button>
       </nav>
     </aside>
@@ -38,6 +39,14 @@
       <section id="view-crono" class="view show">
         <h2 class="section-title">⏱ TIMPUL LUCRAT ASTĂZI</h2>
         <p class="welcome">Bine ai venit, <strong id="welcome-name">–</strong>!</p>
+
+        <div class="card">
+          <label>Punct de lucru</label>
+          <div class="row">
+            <select id="sel-punct-crono"></select>
+            <small class="muted">selectează locul tău de muncă</small>
+          </div>
+        </div>
 
         <div class="timer-wrap">
           <div id="timer-big" class="timer">0 Ore 0 Min 0 Sec</div>
@@ -60,21 +69,55 @@
         </div>
       </section>
 
-      <!-- LOGIN -->
+      <!-- LOGIN (email + parolă) -->
       <section id="view-login" class="view">
-        <div class="card">
-          <h2>Autentificare</h2>
-          <label>Utilizator</label>
-          <select id="sel-user"></select>
-
-          <label class="mt">Punct de lucru</label>
-          <select id="sel-punct"></select>
-
-          <div class="row mt">
-            <button id="btn-login" class="primary">Intră</button>
-            <button data-nav="crono" class="link">Înapoi</button>
+        <div class="auth-card">
+          <div class="auth-header">
+            <div class="auth-icon">👤</div>
+            <div class="auth-title">AUTENTIFICARE</div>
           </div>
-          <small id="login-status" class="muted"></small>
+          <div class="auth-body">
+            <h3 class="welcome-head">Bine ați venit!</h3>
+
+            <label for="login-email">E-mail</label>
+            <input id="login-email" type="email" placeholder="ex: nume@exemplu.ro" />
+
+            <label for="login-pass" class="mt">Parolă</label>
+            <input id="login-pass" type="password" placeholder="••••••••" />
+
+            <button id="login-btn" class="btn-auth">AUTENTIFICARE</button>
+            <small id="login-status" class="muted"></small>
+
+            <div class="auth-links">
+              <span>Nu ai încă un cont? <a href="#" id="link-to-register">Crează un cont nou aici</a></span>
+              <span>Ai uitat parola? <a href="#" id="link-forgot">Recuperează parola</a></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- REGISTER CARD (ascuns implicit) -->
+        <div class="auth-card" id="register-card" style="display:none">
+          <div class="auth-header">
+            <div class="auth-icon">📝</div>
+            <div class="auth-title">CREARE CONT</div>
+          </div>
+          <div class="auth-body">
+            <label for="reg-name">Nume</label>
+            <input id="reg-name" type="text" placeholder="Nume întreg" />
+
+            <label for="reg-email" class="mt">E-mail</label>
+            <input id="reg-email" type="email" placeholder="ex: nume@exemplu.ro" />
+
+            <label for="reg-pass" class="mt">Parolă</label>
+            <input id="reg-pass" type="password" placeholder="Minim 6 caractere" />
+
+            <button id="register-btn" class="btn-auth">CREAZĂ CONT</button>
+            <small id="register-status" class="muted"></small>
+
+            <div class="auth-links">
+              <span>Ai deja cont? <a href="#" id="link-to-login">Autentifică-te</a></span>
+            </div>
+          </div>
         </div>
       </section>
 

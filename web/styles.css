@@ -34,3 +34,14 @@ input,select{flex:1;padding:10px 12px;border:1px solid #d0d7de;border-radius:8px
 .muted{color:var(--muted)}
 .footer{text-align:center;color:var(--muted);padding:20px}
 @media (max-width:900px){.layout{grid-template-columns:1fr}.sidebar{position:sticky;top:0;flex-direction:row;flex-wrap:wrap;gap:6px}.side-item{background:rgba(255,255,255,.14)}.content{padding:10px}}
+
+/* Auth cards */
+.auth-card{background:var(--panel);border:1px solid #e5e7eb;border-radius:12px;max-width:420px;margin:20px auto;box-shadow:0 10px 20px rgba(0,0,0,.05)}
+.auth-header{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #eee;background:#faf7ff;border-radius:12px 12px 0 0}
+.auth-icon{font-size:22px}
+.auth-title{font-weight:800;color:#6f42c1;letter-spacing:.6px}
+.auth-body{display:flex;flex-direction:column;gap:10px;padding:18px}
+.btn-auth{padding:12px 16px;border-radius:10px;background:#6f42c1;color:#fff;border:1px solid #6f42c1;cursor:pointer;margin-top:6px}
+.btn-auth:hover{filter:brightness(0.95)}
+.auth-links{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.welcome-head{margin:4px 0 8px 0;color:#333}

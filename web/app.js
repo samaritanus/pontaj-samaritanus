@@ -5,6 +5,7 @@ const $$ = (sel) => document.querySelectorAll(sel);
 const state = {
   baseUrl: localStorage.getItem('baseUrl') || 'http://192.168.1.200:5000',
   user: JSON.parse(localStorage.getItem('user')||'null'),
+  token: localStorage.getItem('token') || null,
   punct: localStorage.getItem('punct') || null,
 };
 
@@ -17,8 +18,9 @@ function show(view){
   $$('.side-item').forEach(b => b.classList.remove('active'));
   const act = document.querySelector(`.side-item[data-nav="${view}"]`);
   if(act) act.classList.add('active');
-  if(view==='login') loadLogin();
+  if(view==='login') {/* nothing to preload */}
   if(view==='crono') initCrono();
+  if(view==='logout') doLogout();
 }
 
 // Home: save base URL
@@ -38,36 +40,57 @@ $('#save-url').addEventListener('click', async () => {
 // API helpers
 async function api(path, opts){
   const url = state.baseUrl.replace(/\/$/, '') + path;
-  const res = await fetch(url, opts);
+  const headers = Object.assign({}, (opts && opts.headers) || {});
+  if(state.token) headers['Authorization'] = 'Bearer ' + state.token;
+  const res = await fetch(url, Object.assign({}, opts, { headers }));
   if(!res.ok) throw new Error('HTTP '+res.status);
   return res.json();
 }
 
-async function loadLogin(){
-  $('#login-status').textContent = 'Încărc...' ;
+// Auth: login/register/logout
+$('#login-btn')?.addEventListener('click', async () => {
+  const email = $('#login-email').value.trim();
+  const password = $('#login-pass').value;
+  $('#login-status').textContent = 'Autentific...';
   try{
-    const [users, puncte] = await Promise.all([
-      api('/api/users'),
-      api('/api/puncte_lucru')
-    ]);
-    const su = $('#sel-user');
-    su.innerHTML = users.map(u => `<option>${u.name||u.user||u}</option>`).join('');
-    const sp = $('#sel-punct');
-    sp.innerHTML = puncte.map(p => `<option>${p}</option>`).join('');
+    const resp = await api('/api/auth/login', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ email, password }) });
+    state.token = resp.token; localStorage.setItem('token', state.token);
+    state.user = resp.user; localStorage.setItem('user', JSON.stringify(state.user));
     $('#login-status').textContent = '';
-  }catch(e){
-    $('#login-status').textContent = 'Nu pot încărca listele ('+e.message+')';
-  }
-}
-
-$('#btn-login').addEventListener('click', () => {
-  const user = { name: $('#sel-user').value };
-  const punct = $('#sel-punct').value;
-  state.user = user; state.punct = punct;
-  localStorage.setItem('user', JSON.stringify(user));
-  localStorage.setItem('punct', punct);
-  show('crono');
+    show('crono');
+  }catch(e){ $('#login-status').textContent = 'Eroare autentificare: '+e.message; }
 });
+
+$('#link-to-register')?.addEventListener('click', (e)=>{ e.preventDefault();
+  document.querySelector('#view-login .auth-card').style.display='none';
+  $('#register-card').style.display='block';
+});
+$('#link-to-login')?.addEventListener('click', (e)=>{ e.preventDefault();
+  document.querySelector('#view-login .auth-card').style.display='block';
+  $('#register-card').style.display='none';
+});
+$('#link-forgot')?.addEventListener('click', (e)=>{ e.preventDefault(); alert('Contactați un administrator pentru resetarea parolei.'); });
+
+$('#register-btn')?.addEventListener('click', async () => {
+  const name = $('#reg-name').value.trim();
+  const email = $('#reg-email').value.trim();
+  const password = $('#reg-pass').value;
+  $('#register-status').textContent = 'Înregistrez...';
+  try{
+    const resp = await api('/api/auth/register', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ name, email, password }) });
+    state.token = resp.token; localStorage.setItem('token', state.token);
+    state.user = resp.user; localStorage.setItem('user', JSON.stringify(state.user));
+    $('#register-status').textContent = '';
+    show('crono');
+  }catch(e){ $('#register-status').textContent = 'Eroare creare cont: '+e.message; }
+});
+
+function doLogout(){
+  state.token = null; localStorage.removeItem('token');
+  state.user = null; localStorage.removeItem('user');
+  // păstrăm punctul selectat separat
+  show('login');
+}
 
 function whoText(){
   const u = state.user?.name || '-';
@@ -80,8 +103,20 @@ async function initCrono(){
   // welcome name
   $('#welcome-name').textContent = state.user?.name || '–';
   // Update buttons based on last event and boot timer
+  await initPuncte();
   await updateWorkState();
   await refreshSummary();
+}
+
+async function initPuncte(){
+  try{
+    const puncte = await api('/api/puncte_lucru');
+    const el = $('#sel-punct-crono');
+    el.innerHTML = puncte.map(p=>`<option>${p}</option>`).join('');
+    if(state.punct){ el.value = state.punct; }
+    el.addEventListener('change', ()=>{ state.punct = el.value; localStorage.setItem('punct', state.punct); });
+    if(!state.punct && puncte.length){ state.punct = puncte[0]; localStorage.setItem('punct', state.punct); }
+  }catch{}
 }
 
 async function updateWorkState(){
@@ -192,8 +227,10 @@ async function postAction(action){
   const body = { user: state.user.name, punct: state.punct, action };
   if(geo) body.geo = geo;
   try{
+    const headers = { 'Content-Type':'application/json' };
+    if(state.token) headers['Authorization'] = 'Bearer ' + state.token;
     await fetch(state.baseUrl.replace(/\/$/, '') + '/api/pontaj', {
-      method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body)
+      method:'POST', headers, body: JSON.stringify(body)
     });
     await updateWorkState();
     await refreshSummary();
