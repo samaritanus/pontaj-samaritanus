@@ -1,0 +1,11 @@
+{
+  "name": "Pontaj Samaritanus",
+  "short_name": "Pontaj",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0d6efd",
+  "icons": [
+    { "src": "../assets/logo512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
