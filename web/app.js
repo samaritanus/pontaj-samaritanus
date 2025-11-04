@@ -8,16 +8,17 @@ const state = {
   punct: localStorage.getItem('punct') || null,
 };
 
-// Routing
+// Routing (sidebar & internal links)
 $$('button[data-nav]').forEach(btn => btn.addEventListener('click', () => show(btn.dataset.nav)));
 function show(view){
   $$('.view').forEach(v => v.classList.remove('show'));
-  $('#view-' + view).classList.add('show');
-  $$('.topbar .link').forEach(b => b.classList.remove('active'));
-  const act = document.querySelector(`.topbar .link[data-nav="${view}"]`);
+  const sec = $('#view-' + view) || $('#view-crono');
+  if(sec) sec.classList.add('show');
+  $$('.side-item').forEach(b => b.classList.remove('active'));
+  const act = document.querySelector(`.side-item[data-nav="${view}"]`);
   if(act) act.classList.add('active');
   if(view==='login') loadLogin();
-  if(view==='main') initMain();
+  if(view==='crono') initCrono();
 }
 
 // Home: save base URL
@@ -65,7 +66,7 @@ $('#btn-login').addEventListener('click', () => {
   state.user = user; state.punct = punct;
   localStorage.setItem('user', JSON.stringify(user));
   localStorage.setItem('punct', punct);
-  show('main');
+  show('crono');
 });
 
 function whoText(){
@@ -74,10 +75,54 @@ function whoText(){
   return `Utilizator: ${u} | Punct: ${p}`;
 }
 
-async function initMain(){
-  $('#who').textContent = whoText();
+let timerHandle = null; let startTs = null; let isWorking = false;
+async function initCrono(){
+  // welcome name
+  $('#welcome-name').textContent = state.user?.name || '–';
+  // Update buttons based on last event and boot timer
+  await updateWorkState();
   await refreshSummary();
+}
+
+async function updateWorkState(){
+  clearInterval(timerHandle); timerHandle = null; startTs = null; isWorking = false;
+  try{
+    const data = await api('/api/pontaje');
+    const u = state.user?.name;
+    const mine = data.filter(e => (e.user||e.username) === u)
+      .sort((a,b)=> new Date(a.time||a.timestamp) - new Date(b.time||b.timestamp));
+    for(let i=mine.length-1;i>=0;i--){
+      const ev = mine[i];
+      if(ev.action==='sosire'){ startTs = new Date(ev.time||ev.timestamp); isWorking = true; break; }
+      if(ev.action==='plecare'){ isWorking = false; break; }
+    }
+  }catch{}
+  setButtons();
+  renderTimer();
+  if(isWorking){ timerHandle = setInterval(renderTimer, 1000); }
   await lastEvent();
+}
+
+function setButtons(){
+  const bIn = $('#btn-sosire');
+  const bOut = $('#btn-plecare');
+  if(isWorking){
+    bIn.setAttribute('disabled',''); bIn.classList.add('muted'); bIn.classList.remove('success');
+    bOut.removeAttribute('disabled'); bOut.classList.remove('muted'); bOut.classList.add('danger');
+  }else{
+    bOut.setAttribute('disabled',''); bOut.classList.add('muted'); bOut.classList.remove('danger');
+    bIn.removeAttribute('disabled'); bIn.classList.remove('muted'); bIn.classList.add('success');
+  }
+}
+
+function renderTimer(){
+  const el = $('#timer-big');
+  if(!isWorking || !startTs){ el.textContent = '0 Ore 0 Min 0 Sec'; return; }
+  const diff = Date.now() - startTs.getTime();
+  const s = Math.floor(diff/1000)%60;
+  const m = Math.floor(diff/60000)%60;
+  const h = Math.floor(diff/3600000);
+  el.textContent = `${h} Ore ${m} Min ${s} Sec`;
 }
 
 async function lastEvent(){
@@ -150,7 +195,7 @@ async function postAction(action){
     await fetch(state.baseUrl.replace(/\/$/, '') + '/api/pontaj', {
       method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body)
     });
-    await lastEvent();
+    await updateWorkState();
     await refreshSummary();
   }catch(e){ alert('Nu pot trimite pontajul: '+e.message); }
 }
@@ -162,3 +207,6 @@ $('#btn-plecare').addEventListener('click', ()=> postAction('plecare'));
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
+
+// Initialize
+show('crono');

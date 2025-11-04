@@ -10,90 +10,89 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="../assets/logo512.png" alt="Logo" />
-      <span>Pontaj Samaritanus</span>
-    </div>
-    <nav>
-      <button data-nav="home" class="link active">Home</button>
-      <button data-nav="login" class="link">Login</button>
-      <button data-nav="main" class="link">Pontaj</button>
-    </nav>
-  </header>
-
-  <main>
-    <!-- HOME -->
-    <section id="view-home" class="view show">
-      <div class="hero">
-        <img src="../assets/logo512.png" alt="Ambulanță Samaritanus" />
-        <h1>Ce oferă aplicația</h1>
-        <ul>
-          <li>Pontaj rapid: Sosire / Plecare</li>
-          <li>Calcul automat ore și venit</li>
-          <li>Localizare la pontare (opțional)</li>
-          <li>Evidență avansuri și plăți</li>
-        </ul>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img src="../assets/logo512.png" alt="Logo" />
+        <span>Pontaj</span>
       </div>
+      <nav class="side-nav">
+        <button class="side-item active" data-nav="crono">⏱ Cronometru</button>
+        <button class="side-item" data-nav="dashboard">📊 Dashboard</button>
+        <button class="side-item" data-nav="raport">📄 Raport general</button>
+        <button class="side-item" data-nav="login">🔐 Autentificare</button>
+        <button class="side-item" data-nav="home">ℹ️ Despre</button>
+      </nav>
+    </aside>
 
-      <div class="card">
-        <h2>Adresa server</h2>
-        <p>Completează URL-ul backend-ului (de ex. http://192.168.1.200:5000)</p>
-        <div class="row">
-          <input id="server-url" type="url" placeholder="http://192.168.1.200:5000" />
-          <button id="save-url">Salvează</button>
+    <main class="content">
+      <!-- HERO BAR -->
+      <header class="hero-bar">
+        <div class="hero-text">
+          <h1>#PONTAJ</h1>
+          <p>Gestionare timp de lucru simplă și clară.</p>
         </div>
-        <small id="url-status" class="muted"></small>
-      </div>
+      </header>
 
-      <div class="row mt">
-        <button data-nav="login" class="primary">Intră în aplicație</button>
-      </div>
-    </section>
+      <!-- CRONOMETRU (implicit) -->
+      <section id="view-crono" class="view show">
+        <h2 class="section-title">⏱ TIMPUL LUCRAT ASTĂZI</h2>
+        <p class="welcome">Bine ai venit, <strong id="welcome-name">–</strong>!</p>
 
-    <!-- LOGIN -->
-    <section id="view-login" class="view">
-      <div class="card">
-        <h2>Autentificare</h2>
-        <label>Utilizator</label>
-        <select id="sel-user"></select>
-
-        <label class="mt">Punct de lucru</label>
-        <select id="sel-punct"></select>
+        <div class="timer-wrap">
+          <div id="timer-big" class="timer">0 Ore 0 Min 0 Sec</div>
+        </div>
 
         <div class="row mt">
-          <button id="btn-login" class="primary">Intră</button>
-          <button data-nav="home" class="link">Înapoi</button>
-        </div>
-        <small id="login-status" class="muted"></small>
-      </div>
-    </section>
-
-    <!-- MAIN / PONTAJ -->
-    <section id="view-main" class="view">
-      <div class="card">
-        <h2>Pontaj</h2>
-        <div id="who" class="muted"></div>
-
-        <div class="row mt">
-          <button id="btn-sosire" class="success">Sosire</button>
-          <button id="btn-plecare" class="danger">Plecare</button>
+          <button id="btn-sosire" class="btn-lg success">AM VENIT!</button>
+          <button id="btn-plecare" class="btn-lg muted">AM PLECAT!</button>
         </div>
 
         <label class="mt"><input type="checkbox" id="chk-geo" checked /> Trimite locația</label>
-
         <div id="last" class="muted mt"></div>
-      </div>
 
-      <div class="card">
-        <h3>Rezumat lunar</h3>
-        <div id="summary">–</div>
-        <div class="row mt">
-          <button id="btn-refresh">Reîncarcă</button>
+        <div class="card mt">
+          <h3>Rezumat lunar</h3>
+          <div id="summary">–</div>
+          <div class="row mt">
+            <button id="btn-refresh">Reîncarcă</button>
+          </div>
         </div>
-      </div>
-    </section>
-  </main>
+      </section>
+
+      <!-- LOGIN -->
+      <section id="view-login" class="view">
+        <div class="card">
+          <h2>Autentificare</h2>
+          <label>Utilizator</label>
+          <select id="sel-user"></select>
+
+          <label class="mt">Punct de lucru</label>
+          <select id="sel-punct"></select>
+
+          <div class="row mt">
+            <button id="btn-login" class="primary">Intră</button>
+            <button data-nav="crono" class="link">Înapoi</button>
+          </div>
+          <small id="login-status" class="muted"></small>
+        </div>
+      </section>
+
+      <!-- HOME / DESPRE -->
+      <section id="view-home" class="view">
+        <div class="card">
+          <h2>Despre aplicație</h2>
+          <p>Aplicația de pontaj Samaritanus permite marcarea sosirii și plecării, calculează automat orele
+            lucrate și evidențiază avansurile și plățile. Configurați adresa serverului pentru integrare în rețeaua dvs.</p>
+          <div class="row mt">
+            <input id="server-url" type="url" placeholder="http://192.168.1.200:5000" />
+            <button id="save-url">Salvează URL</button>
+          </div>
+          <small id="url-status" class="muted"></small>
+        </div>
+      </section>
+    </main>
+  </div>
 
   <footer class="footer">© Samaritanus</footer>
 
